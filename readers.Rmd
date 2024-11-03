@@ -1,0 +1,104 @@
+---
+title: "IDA 2024"
+output: html_document
+date: "2024-10-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(umap)
+require(papaja)
+require(Hmisc)
+require(ggimage)
+require(cowplot)
+
+performance_5_hidden_units = read_csv('outputs/5_hidden_units/performance.csv', col_names = c("loss", "binary_accuracy", "mse")) %>% 
+  mutate(epoch = seq_len(n()) - 1) %>% 
+  select(epoch, everything())
+performance_100_hidden_units = read_csv('outputs/100_hidden_units/performance.csv', col_names = c("loss", "binary_accuracy", "mse")) %>% 
+  mutate(epoch = seq_len(n()) - 1) %>% 
+  select(epoch, everything())
+
+```
+
+
+
+## Compile all activations into a single dataframe (to subsequently compress)
+## First, the words for the 100 hidden unit learner
+```{r}
+acts_files = list.files("outputs/100_hidden_units", full.names = T)
+words = read_csv("data/kidwords.csv", col_names = "word")
+
+all_acts_list = list()
+
+for (filename in acts_files){
+  if (str_detect(filename, "all_acts")){
+    
+    epoch = str_extract(filename, "(?<=acts_)\\d+(?=\\.csv)")
+        
+    acts = read_csv(filename, col_names = F) %>% 
+      mutate(word = words$word,
+             epoch = as.numeric(epoch)) %>% 
+      select(word, epoch, everything())
+    
+    all_acts_list[[epoch]] = acts
+    
+  }
+}
+
+pcs_100_hidden_units = prcomp(list_rbind(all_acts_list)[,3:102])$x %>% 
+  data.frame() %>% 
+  mutate(word = list_rbind(all_acts_list)$word,
+         epoch = list_rbind(all_acts_list)$epoch) %>% 
+  select(word, epoch, everything())
+
+```
+
+
+## Now, the words for the 5 hidden unit learner
+```{r}
+acts_files = list.files("outputs/5_hidden_units", full.names = T)
+all_acts_list = list()
+
+for (filename in acts_files){
+  if (str_detect(filename, "all_acts")){
+    
+    epoch = str_extract(filename, "(?<=acts_)\\d+(?=\\.csv)")
+        
+    acts = read_csv(filename, col_names = F) %>% 
+      mutate(word = words$word,
+             epoch = as.numeric(epoch)) %>% 
+      select(word, epoch, everything())
+    
+    all_acts_list[[epoch]] = acts
+    
+  }
+}
+
+pcs_5_hidden_units = prcomp(list_rbind(all_acts_list)[,3:7])$x %>% 
+  data.frame() %>% 
+  mutate(word = list_rbind(all_acts_list)$word,
+         epoch = list_rbind(all_acts_list)$epoch) %>% 
+  select(word, epoch, everything())
+
+```
+
+
+### Generate plots for words
+```{r}
+source("plot_words.R")
+```
+
+
+
+### Cluster dendrogram for words
+
+```{r}
+
+
+
+```
+
+
+
